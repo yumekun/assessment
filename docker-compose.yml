@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - postgres-data:/var/lib/postgresql/data/
+      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - isi-bank
+
+  redis:
+    image: redis
+    restart: always
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - isi-bank
+
+  account-service:
+    build: ./services/account-service
+    image: account-service
+    container_name: account-service
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    env_file:
+      - ./services/account-service/config.env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - isi-bank
+
+  journal-service:
+    build: ./services/journal-service
+    image: journal-service
+    container_name: journal-service
+    restart: unless-stopped
+    env_file:
+      - ./services/journal-service/config.env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - isi-bank
+
+networks:
+  isi-bank:
+    driver: bridge
+    name: isi-bank
+
+volumes:
+  postgres-data:
